@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sudoku Solver</title>
+    <style>
+        
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #3A4D39;
+        }
+
+        h1 {
+            color: white;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        p {
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-gap: 2px;
+            margin: 10px auto;
+            width: 300px;
+        }
+        
+        .sudoku-cell {
+            width: 30px;
+            height: 30px;
+            font-size: 20px;
+            text-align: center;
+            border: 1px solid;
+            outline: none;
+        }
+        
+        button {
+            color: white;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #86A789;
+        }
+        
+        #result {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 18px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sudoku Solver</h1>
+    <p>Enter the Sudoku grid (0 for empty cells):</p>
+    <div id="sudoku-grid" class="sudoku-grid"></div>
+    <br>
+    <button onclick="solveSudoku()">Solve Sudoku</button>
+    <button onclick="resetGrid()">Reset</button>
+
+    <div id="result"></div>
+
+    <script>
+        const N = 9;
+        let grid = new Array(N).fill(0).map(() => new Array(N).fill(0));
+        let currentCell = { row: 0, col: 0 };
+
+        function initializeGrid() {
+            const sudokuGrid = document.getElementById('sudoku-grid');
+            for (let row = 0; row < N; row++) {
+                for (let col = 0; col < N; col++) {
+                    const cell = document.createElement('input');
+                    cell.type = 'text';
+                    cell.id = `cell-${row}-${col}`;
+                    cell.className = 'sudoku-cell';
+                    cell.setAttribute('maxlength', '1');
+                    cell.setAttribute('size', '1');
+                    cell.addEventListener('input', moveNext);
+                    cell.addEventListener('keydown', handleArrowKeys);
+                    sudokuGrid.appendChild(cell);
+                }
+            }
+        }
+
+        function readGrid() {
+            for (let row = 0; row < N; row++) {
+                for (let col = 0; col < N; col++) {
+                    let cellValue = document.getElementById(`cell-${row}-${col}`).value;
+                    grid[row][col] = cellValue === '' ? 0 : parseInt(cellValue);
+                }
+            }
+        }
+
+        function updateGrid() {
+            for (let row = 0; row < N; row++) {
+                for (let col = 0; col < N; col++) {
+                    document.getElementById(`cell-${row}-${col}`).value = grid[row][col];
+                }
+            }
+        }
+
+        function moveNext(event) {
+            const input = event.target;
+            const idParts = input.id.split('-');
+            const row = parseInt(idParts[1]);
+            const col = parseInt(idParts[2]);
+            if (col < N - 1) {
+                document.getElementById(`cell-${row}-${col + 1}`).focus();
+            } else if (row < N - 1) {
+                document.getElementById(`cell-${row + 1}-0`).focus();
+            }
+        }
+
+        function handleArrowKeys(event) {
+            const key = event.key;
+            const row = currentCell.row;
+            const col = currentCell.col;
+
+            if (key === 'ArrowLeft' && col > 0) {
+                document.getElementById(`cell-${row}-${col - 1}`).focus();
+                currentCell.col = col - 1;
+            } else if (key === 'ArrowRight' && col < N - 1) {
+                document.getElementById(`cell-${row}-${col + 1}`).focus();
+                currentCell.col = col + 1;
+            } else if (key === 'ArrowUp' && row > 0) {
+                document.getElementById(`cell-${row - 1}-${col}`).focus();
+                currentCell.row = row - 1;
+            } else if (key === 'ArrowDown' && row < N - 1) {
+                document.getElementById(`cell-${row + 1}-${col}`).focus();
+                currentCell.row = row + 1;
+            }
+        }
+
+        function solveSudoku() {
+            readGrid();
+            const solved = solveSudokuRecursive(0, 0);
+            if (solved) {
+                updateGrid();
+                document.getElementById('result').textContent = 'Sudoku Solved!';
+            } else {
+                document.getElementById('result').textContent = 'No solution exists.';
+            }
+        }
+
+        function solveSudokuRecursive(row, col) {
+            if (row === N - 1 && col === N) {
+                return true;
+            }
+
+            if (col === N) {
+                row++;
+                col = 0;
+            }
+
+            if (grid[row][col] !== 0) {
+                return solveSudokuRecursive(row, col + 1);
+            }
+
+            for (let num = 1; num <= N; num++) {
+                if (isSafe(row, col, num)) {
+                    grid[row][col] = num;
+                    if (solveSudokuRecursive(row, col + 1)) {
+                        return true;
+                    }
+                    grid[row][col] = 0;
+                }
+            }
+            return false;
+        }
+
+        function isSafe(row, col, num) {
+            return !usedInRow(row, num) && !usedInCol(col, num) && !usedInBox(row - row % 3, col - col % 3, num);
+        }
+
+        function usedInRow(row, num) {
+            for (let col = 0; col < N; col++) {
+                if (grid[row][col] === num) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function usedInCol(col, num) {
+            for (let row = 0; row < N; row++) {
+                if (grid[row][col] === num) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function usedInBox(boxStartRow, boxStartCol, num) {
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    if (grid[boxStartRow + row][boxStartCol + col] === num) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function resetGrid() {
+            for (let row = 0; row < N; row++) {
+                for (let col = 0; col < N; col++) {
+                    grid[row][col] = 0;
+                    document.getElementById(`cell-${row}-${col}`).value = '';
+                }
+            }
+            document.getElementById('result').textContent = '';
+        }
+
+        initializeGrid();
+    </script>
+</body>
+</html>
